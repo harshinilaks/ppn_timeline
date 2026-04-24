@@ -32,7 +32,9 @@ export class DOMMixins {
     }
 
     removeFrom(container) {
-        container.removeChild(this._el.container);
+        if (this._el.container && container && this._el.container.parentNode === container) {
+            container.removeChild(this._el.container);
+        }
         this.onRemove();
     }
 

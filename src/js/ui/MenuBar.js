@@ -17,6 +17,11 @@ export class MenuBar {
             button_backtostart: {},
             button_zoomin: {},
             button_zoomout: {},
+            button_filter: {},
+            button_clear: {},
+            filter_container: {},
+            input_start_date: {},
+            input_end_date: {},
             arrow: {},
             line: {},
             coverbar: {},
@@ -148,6 +153,24 @@ export class MenuBar {
         this.fire("back_to_start", e);
     }
 
+    _onButtonFilter(e) {
+        this.fire("filter_date", {
+            start_date: this._el.input_start_date.value,
+            end_date: this._el.input_end_date.value
+        });
+    }
+
+    _onButtonClearFilter(e) {
+        this._el.input_start_date.value = '';
+        this._el.input_end_date.value = '';
+        this.fire("clear_filter");
+    }
+
+    _onDateInputKeyDown(e) {
+        if (e.key == 'Enter' || e.keyCode == 13) {
+            this._onButtonFilter(e);
+        }
+    }
 
     /*	Private Methods
     ================================================== */
@@ -158,6 +181,25 @@ export class MenuBar {
         this._el.button_zoomout = DOM.createButton('tl-menubar-button', this._el.container);
         this._el.button_forwardtoend = DOM.createButton('tl-menubar-button', this._el.container);
         this._el.button_backtostart = DOM.createButton('tl-menubar-button', this._el.container);
+
+        this._el.filter_container = DOM.create('div', 'tl-date-filter', this._el.container);
+        this._el.input_start_date = DOM.create('input', 'tl-date-filter-input', this._el.filter_container);
+        this._el.input_start_date.type = 'date';
+        this._el.input_start_date.setAttribute('aria-label', this._('filter_start_date') || 'Start date');
+        this._el.input_start_date.title = this._('filter_start_date') || 'Start date';
+
+        this._el.input_end_date = DOM.create('input', 'tl-date-filter-input', this._el.filter_container);
+        this._el.input_end_date.type = 'date';
+        this._el.input_end_date.setAttribute('aria-label', this._('filter_end_date') || 'End date');
+        this._el.input_end_date.title = this._('filter_end_date') || 'End date';
+
+        this._el.button_filter = DOM.createButton('tl-menubar-button tl-date-filter-button', this._el.filter_container);
+        this._el.button_filter.innerHTML = this._('filter') || 'Filter';
+        this._el.button_filter.setAttribute('aria-label', this._('filter') || 'Filter');
+
+        this._el.button_clear = DOM.createButton('tl-menubar-button tl-date-filter-button', this._el.filter_container);
+        this._el.button_clear.innerHTML = this._('clear') || 'Clear';
+        this._el.button_clear.setAttribute('aria-label', this._('clear') || 'Clear');
 
         if (Browser.mobile) {
             this._el.container.setAttribute("ontouchstart", " ");
@@ -181,6 +223,10 @@ export class MenuBar {
         DOMEvent.addListener(this._el.button_backtostart, 'click', this._onButtonBackToStart, this);
         DOMEvent.addListener(this._el.button_zoomin, 'click', this._onButtonZoomIn, this);
         DOMEvent.addListener(this._el.button_zoomout, 'click', this._onButtonZoomOut, this);
+        DOMEvent.addListener(this._el.button_filter, 'click', this._onButtonFilter, this);
+        DOMEvent.addListener(this._el.button_clear, 'click', this._onButtonClearFilter, this);
+        DOMEvent.addListener(this._el.input_start_date, 'keydown', this._onDateInputKeyDown, this);
+        DOMEvent.addListener(this._el.input_end_date, 'keydown', this._onDateInputKeyDown, this);
     }
 
     // Update Display

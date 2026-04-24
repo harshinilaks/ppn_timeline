@@ -13,6 +13,7 @@ import { Animate } from "../animation/Animate"
 import { StorySlider } from "../slider/StorySlider"
 import { MenuBar } from "../ui/MenuBar"
 import { loadCSS, loadJS } from "../core/Load";
+import { makeDate, parseDate } from "../date/TLDate"
 
 let script_src_url = null;
 if (document) {
@@ -354,6 +355,8 @@ class Timeline {
             // don't validate if it's already problematic to avoid clutter
             this.config.validate();
             this._validateOptions();
+            this._original_events = this.config.events.slice();
+            this._original_eras = this.config.eras.slice();
         }
         if (this.config.isValid()) {
             try {
@@ -481,7 +484,74 @@ class Timeline {
         this._menubar.on('zoom_out', this._onZoomOut, this);
         this._menubar.on('forward_to_end', this._onForwardToEnd, this);
         this._menubar.on('back_to_start', this._onBackToStart, this);
+        this._menubar.on('filter_date', this._onFilterDate, this);
+        this._menubar.on('clear_filter', this._onClearFilter, this);
 
+    }
+
+    _onFilterDate(e) {
+        this.filterByDateRange(e.start_date, e.end_date);
+    }
+
+    _onClearFilter() {
+        this.clearDateFilter();
+    }
+
+    filterByDateRange(start_date, end_date) {
+        if (!this._original_events) {
+            this._original_events = this.config.events.slice();
+            this._original_eras = this.config.eras.slice();
+        }
+
+        var start = start_date ? makeDate(parseDate(start_date)) : null;
+        var end = end_date ? makeDate(parseDate(end_date)) : null;
+
+        if (start && end && start.isAfter(end)) {
+            this.showMessage(this._('start_date_after_end') || "Start date must be before end date.");
+            return;
+        }
+
+        this.config.events = this._original_events.filter((event) => {
+            if (start && event.start_date.isBefore(start)) {
+                return false;
+            }
+            if (end && event.start_date.isAfter(end)) {
+                return false;
+            }
+            return true;
+        });
+
+        if (this.config.events.length === 0) {
+            this.showMessage(this._('no_events_in_date_range') || "No events were found in that date range.");
+        } else if (this.message) {
+            this.message.hide();
+        }
+
+        this._rebuildTimeline();
+    }
+
+    clearDateFilter() {
+        if (!this._original_events) {
+            return;
+        }
+        this.config.events = this._original_events.slice();
+        this.config.eras = this._original_eras.slice();
+        if (this.message) {
+            this.message.hide();
+        }
+        this._rebuildTimeline();
+    }
+
+    _rebuildTimeline() {
+        if (!this.config || !this.config.isValid()) {
+            return;
+        }
+        this._initLayout();
+        this._initEvents();
+        if (this.message) {
+            this.message.hide();
+        }
+        this._updateDisplay();
     }
 
     _onColorChange(e) {
