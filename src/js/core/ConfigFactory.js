@@ -66,6 +66,11 @@ function extractEventFromCSVObject(orig_row) {
         row[k] = trim(orig_row[k]) // get rid of white-space and reduce all-blank cells to empty strings
     })
 
+    // Support both standard timeline headers and custom format headers with fallback
+    const headline = row['Headline'] || row['Title'] || '';
+    const text = row['Text'] || row['Object Description (Abstract)'] || '';
+    const displayDate = row['Display Date'] || row['Year Published'] || '';
+
     var d = {
         media: {
             caption: row['Media Caption'] || '',
@@ -75,10 +80,10 @@ function extractEventFromCSVObject(orig_row) {
             alt: row['Alt Text'] || ''
         },
         text: {
-            headline: row['Headline'] || '',
-            text: row['Text'] || ''
+            headline: headline,
+            text: text
         },
-        display_date: row['Display Date'] || '', // only in v3 but no problem
+        display_date: displayDate,
         group: row['Group'] || row['Tag'] || '', // small diff between v1 and v3 sheets
         background: interpretBackground(row['Background']), // only in v3 but no problem
         type: row['Type'] || ''
@@ -95,9 +100,10 @@ function extractEventFromCSVObject(orig_row) {
     } else {
         // V3 date handling
         // every date must have at least a year to be valid.
-        if (row['Year']) {
+        let yearValue = row['Year'] || row['Year Published'];
+        if (yearValue) {
             d.start_date = {
-                year: clean_integer(row['Year']),
+                year: clean_integer(yearValue),
                 month: clean_integer(row['Month']) || '',
                 day: clean_integer(row['Day']) || ''
             }
@@ -163,7 +169,7 @@ function processCSVRows(rows) {
                 if (e.message) {
                     e = e.message;
                 }
-                let label = row['Headline'] || i
+                let label = row['Headline'] || row['Title'] || i
                 timeline_config.errors.push(e + `[${label}]`);
             }
         }
