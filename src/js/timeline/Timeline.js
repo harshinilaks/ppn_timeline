@@ -15,6 +15,43 @@ import { MenuBar } from "../ui/MenuBar"
 import { loadCSS, loadJS } from "../core/Load";
 import { makeDate, parseDate } from "../date/TLDate"
 
+
+const PREDEFINED_EVENTS = [
+    {
+        unique_id: "balfour-declaration-1917",
+        start_date: { year: "1917", month: "11", day: "2" },
+        text: {
+            headline: "Balfour Declaration",
+            text: 'The British government promised support for a "national home for the Jewish people" in Palestine.'
+        }
+    },
+    {
+        unique_id: "british-mandate-1922",
+        start_date: { year: "1922", month: "7", day: "24" },
+        text: {
+            headline: "British Mandate",
+            text: "The League of Nations granted the UK control over Palestine, increasing Jewish immigration."
+        }
+    },
+    {
+        unique_id: "arab-revolt-1936-1939",
+        start_date: { year: "1936", month: "4", day: "1" },
+        end_date: { year: "1939", month: "1", day: "1" },
+        text: {
+            headline: "Arab Revolt",
+            text: "A major Palestinian uprising against British rule and Zionist migration, which was suppressed."
+        }
+    }
+];
+function addPredefinedEvents(data) {
+    if (data && Array.isArray(data.events)) {
+        data.events = [...PREDEFINED_EVENTS, ...data.events];
+    }
+    return data;
+}
+
+
+
 let script_src_url = null;
 if (document) {
     let script_tags = document.getElementsByTagName('script');
@@ -269,20 +306,30 @@ class Timeline {
      * assume it's a JSON object in the right format, and wrap it in a new TimelineConfig.
      * @param {string|TimelineConfig|object} data
      */
-    _initData(data) {
-        if (typeof data == 'string') {
-            makeConfig(data, {
-                callback: function(config) {
-                    this.setConfig(config);
-                }.bind(this),
-                sheets_proxy: this.options.sheets_proxy
-            });
-        } else if (TimelineConfig == data.constructor) {
-            this.setConfig(data);
-        } else {
-            this.setConfig(new TimelineConfig(data));
-        }
+   _initData(data) {
+    if (typeof data == 'string') {
+        makeConfig(data, {
+            callback: function(config) {
+                // Add predefined events using TimelineConfig's parser
+                PREDEFINED_EVENTS.forEach((event) => {
+                    config.addEvent(event);
+                });
+
+                this.setConfig(config);
+            }.bind(this),
+            sheets_proxy: this.options.sheets_proxy
+        });
+    } else if (TimelineConfig == data.constructor) {
+        PREDEFINED_EVENTS.forEach((event) => {
+            data.addEvent(event);
+        });
+
+        this.setConfig(data);
+    } else {
+        // Inject before TimelineConfig parses object data
+        this.setConfig(new TimelineConfig(addPredefinedEvents(data)));
     }
+}
 
     /**
      * Given an input, if it is a Timeline Error object, look up the
