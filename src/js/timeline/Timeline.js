@@ -43,9 +43,63 @@ const PREDEFINED_EVENTS = [
         }
     }
 ];
+
+const COLLECTION_CATEGORIES = [
+    "Heritage, Belonging, and Belief",
+    "Violence, War, and Displacement",
+    "Space, Architecture, and Environment",
+    "Music, Dance, and Literature"
+];
+
+function normalizeCollectionValue(value) {
+    let s = String(value || '').trim();
+
+    // Some sheets include categories wrapped in quotes. Support straight and curly quotes.
+    // Repeat until stable to handle accidental double-wrapping.
+    let prev = null;
+    while (s !== prev) {
+        prev = s;
+        s = s.replace(/^\s*["“”']\s*/, '');
+        s = s.replace(/\s*["“”']\s*$/, '');
+        s = s.trim();
+    }
+    return s;
+}
+
+function isPredefinedEvent(event) {
+    if (!event) {
+        return false;
+    }
+    if (event.is_predefined_event) {
+        return true;
+    }
+    if (!event.unique_id) {
+        return false;
+    }
+    return PREDEFINED_EVENTS.some((e) => e.unique_id === event.unique_id);
+}
+
+function matchesAssignedCollection(event, selectedCollections) {
+    if (!selectedCollections || selectedCollections.size === 0) {
+        return true;
+    }
+    const value = normalizeCollectionValue(event.assigned_collection);
+    if (!value) {
+        return false;
+    }
+    return selectedCollections.has(value);
+}
+
+function markPredefinedEvent(event) {
+    if (event && typeof event === 'object') {
+        event.is_predefined_event = true;
+    }
+    return event;
+}
+
 function addPredefinedEvents(data) {
     if (data && Array.isArray(data.events)) {
-        data.events = [...PREDEFINED_EVENTS, ...data.events];
+        data.events = [...PREDEFINED_EVENTS.map(markPredefinedEvent), ...data.events];
     }
     return data;
 }
@@ -105,6 +159,7 @@ class Timeline {
         this.ready = false;
         this._el = {
             container: DOM.get(elem),
+            collection_filter: {},
             storyslider: {},
             timenav: {},
             menubar: {}
@@ -131,6 +186,13 @@ class Timeline {
 
         /** @type {TimelineConfig} */
         this.config = null;
+
+        this._collection_filter = {
+            selected: new Set(),
+        };
+
+        this._original_all_events = null;
+        this._original_all_eras = null;
 
         this.options = {
             script_path: "https://cdn.knightlab.com/libs/timeline3/latest/js/", // as good a default as any
@@ -312,7 +374,7 @@ class Timeline {
             callback: function(config) {
                 // Add predefined events using TimelineConfig's parser
                 PREDEFINED_EVENTS.forEach((event) => {
-                    config.addEvent(event);
+                    config.addEvent(markPredefinedEvent(event));
                 });
 
                 this.setConfig(config);
@@ -321,7 +383,7 @@ class Timeline {
         });
     } else if (TimelineConfig == data.constructor) {
         PREDEFINED_EVENTS.forEach((event) => {
-            data.addEvent(event);
+            data.addEvent(markPredefinedEvent(event));
         });
 
         this.setConfig(data);
@@ -330,6 +392,102 @@ class Timeline {
         this.setConfig(new TimelineConfig(addPredefinedEvents(data)));
     }
 }
+
+    _applyCollectionFilter() {
+        if (!this.config || !this.config.isValid()) {
+            return;
+        }
+        if (!this._original_all_events) {
+            this._original_all_events = this.config.events.slice();
+            this._original_all_eras = this.config.eras.slice();
+        }
+
+        const selected = this._collection_filter.selected;
+        this.config.events = this._original_all_events.filter((event) => {
+            if (isPredefinedEvent(event)) {
+                return true;
+            }
+            return matchesAssignedCollection(event, selected);
+        });
+        this.config.eras = this._original_all_eras.slice();
+
+        // Date filter should always operate on the currently-filtered set
+        this._original_events = this.config.events.slice();
+        this._original_eras = this.config.eras.slice();
+    }
+
+    _initCollectionFilterUI() {
+        if (!this._el || !this._el.container) {
+            return;
+        }
+
+        this._el.collection_filter = DOM.create('div', 'tl-collection-filter', this._el.container);
+        this._el.collection_filter.innerHTML = '';
+
+        const makeButton = (label, category) => {
+            const btn = DOM.createButton('tl-collection-filter-button', this._el.collection_filter);
+            btn.type = 'button';
+            btn.innerHTML = label;
+            btn.setAttribute('aria-pressed', 'false');
+            btn.addEventListener('click', () => {
+                if (category === null) {
+                    this._collection_filter.selected = new Set();
+                } else {
+                    const normalized = normalizeCollectionValue(category);
+                    const next = new Set(this._collection_filter.selected);
+                    if (next.has(normalized)) {
+                        next.delete(normalized);
+                    } else {
+                        next.add(normalized);
+                    }
+                    this._collection_filter.selected = next;
+                }
+
+                this._syncCollectionFilterUI();
+                this._applyCollectionFilter();
+                this._rebuildTimeline();
+            });
+            return btn;
+        };
+
+        this._el.collection_filter_buttons = {
+            all: makeButton('All', null),
+            categories: {}
+        };
+
+        COLLECTION_CATEGORIES.forEach((cat) => {
+            this._el.collection_filter_buttons.categories[cat] = makeButton(cat, cat);
+        });
+
+        this._syncCollectionFilterUI();
+    }
+
+    _syncCollectionFilterUI() {
+        if (!this._el || !this._el.collection_filter_buttons) {
+            return;
+        }
+
+        const selected = this._collection_filter.selected;
+        const isAll = selected.size === 0;
+
+        this._el.collection_filter_buttons.all.setAttribute('aria-pressed', String(isAll));
+        if (isAll) {
+            this._el.collection_filter_buttons.all.classList.add('tl-is-active');
+        } else {
+            this._el.collection_filter_buttons.all.classList.remove('tl-is-active');
+        }
+
+        Object.keys(this._el.collection_filter_buttons.categories).forEach((cat) => {
+            const btn = this._el.collection_filter_buttons.categories[cat];
+            const pressed = selected.has(normalizeCollectionValue(cat));
+            btn.setAttribute('aria-pressed', String(pressed));
+            if (pressed) {
+                btn.classList.add('tl-is-active');
+            } else {
+                btn.classList.remove('tl-is-active');
+            }
+        });
+    }
 
     /**
      * Given an input, if it is a Timeline Error object, look up the
@@ -402,6 +560,12 @@ class Timeline {
             // don't validate if it's already problematic to avoid clutter
             this.config.validate();
             this._validateOptions();
+
+            this._original_all_events = this.config.events.slice();
+            this._original_all_eras = this.config.eras.slice();
+            this._applyCollectionFilter();
+
+            // Date filtering should operate on the currently-visible set
             this._original_events = this.config.events.slice();
             this._original_eras = this.config.eras.slice();
         }
@@ -454,6 +618,8 @@ class Timeline {
         this.message.removeFrom(this._el.container);
         this._el.container.innerHTML = "";
 
+        this._initCollectionFilterUI();
+
         // Create Layout
         if (this.options.timenav_position == "top") {
             this._el.timenav = DOM.create('div', 'tl-timenav', this._el.container);
@@ -472,6 +638,9 @@ class Timeline {
         // Initial Default Layout
         this.options.width = this._el.container.offsetWidth;
         this.options.height = this._el.container.offsetHeight;
+        if (this._el.collection_filter && this._el.collection_filter.offsetHeight) {
+            this.options.height = Math.max(0, this.options.height - this._el.collection_filter.offsetHeight);
+        }
         // this._el.storyslider.style.top  = "1px";
 
         // Set TimeNav Height
@@ -593,6 +762,10 @@ class Timeline {
         if (!this.config || !this.config.isValid()) {
             return;
         }
+
+        if (this._original_all_events) {
+            this._applyCollectionFilter();
+        }
         this._initLayout();
         this._initEvents();
         if (this.message) {
@@ -695,6 +868,9 @@ class Timeline {
         // Update width and height
         this.options.width = this._el.container.offsetWidth;
         this.options.height = this._el.container.offsetHeight;
+        if (this._el.collection_filter && this._el.collection_filter.offsetHeight) {
+            this.options.height = Math.max(0, this.options.height - this._el.collection_filter.offsetHeight);
+        }
 
         // Check if skinny
         if (this.options.width <= this.options.skinny_size) {

@@ -6,6 +6,24 @@ import { ajax } from "../net/Net"
 import { parseTime, validDateConfig } from "../date/DateUtil"
 import { fetchCSV } from '../core/CSV';
 
+ function getRowValueCaseInsensitive(row, desiredKey) {
+     if (!row || typeof row !== 'object') {
+         return '';
+     }
+     const desired = String(desiredKey || '').trim().toLowerCase();
+     if (!desired) {
+         return '';
+     }
+     const keys = Object.keys(row);
+     for (let i = 0; i < keys.length; i++) {
+         const k = keys[i];
+         if (String(k).trim().toLowerCase() === desired) {
+             return row[k] || '';
+         }
+     }
+     return '';
+ }
+
 function clean_integer(s) {
     if (s) {
         return s.replace(/[\s,]+/g, ''); // doesn't handle '.' as comma separator, but how to distinguish that from decimal separator?
@@ -85,6 +103,7 @@ function extractEventFromCSVObject(orig_row) {
         },
         display_date: displayDate,
         group: row['Group'] || row['Tag'] || '', // small diff between v1 and v3 sheets
+        assigned_collection: getRowValueCaseInsensitive(row, 'assigned collection'),
         background: interpretBackground(row['Background']), // only in v3 but no problem
         type: row['Type'] || ''
     }
