@@ -479,6 +479,11 @@ class Timeline {
         const keywordMode = this._keyword_filter.mode;
         const pinnedIds = this._title_pin.selected_ids;
 
+        const hasAnyUserSelection =
+            (pinnedIds && pinnedIds.size > 0) ||
+            (selectedCollections && selectedCollections.size > 0) ||
+            (selectedKeywords && selectedKeywords.size > 0);
+
         this.config.events = this._original_all_events.filter((event) => {
             if (isPredefinedEvent(event)) {
                 return true;
@@ -487,9 +492,18 @@ class Timeline {
             if (event && event.unique_id && pinnedIds && pinnedIds.has(event.unique_id)) {
                 return true;
             }
+
+            // Default state: show no non-predefined events until user selects a filter.
+            if (!hasAnyUserSelection) {
+                return false;
+            }
+
+            // Collection filter only applies when at least one collection is selected
             if (!matchesAssignedCollection(event, selectedCollections)) {
                 return false;
             }
+
+            // Keyword filter only applies when at least one keyword is selected
             return matchesKeywordFilter(event, selectedKeywords, keywordMode);
         });
         this.config.eras = this._original_all_eras.slice();
@@ -507,6 +521,9 @@ class Timeline {
         this._el.collection_filter = DOM.create('div', 'tl-collection-filter', this._el.container);
         this._el.collection_filter.innerHTML = '';
 
+        const label = DOM.create('div', 'tl-filter-label', this._el.collection_filter);
+        label.innerHTML = 'Filter by collection';
+
         const makeButton = (label, category) => {
             const btn = DOM.createButton('tl-collection-filter-button', this._el.collection_filter);
             btn.type = 'button';
@@ -514,7 +531,7 @@ class Timeline {
             btn.setAttribute('aria-pressed', 'false');
             btn.addEventListener('click', () => {
                 if (category === null) {
-                    this._collection_filter.selected = new Set();
+                    this._collection_filter.selected = new Set(COLLECTION_CATEGORIES.map(normalizeCollectionValue));
                 } else {
                     const normalized = normalizeCollectionValue(category);
                     const next = new Set(this._collection_filter.selected);
@@ -829,9 +846,8 @@ class Timeline {
         if (!this._el || !this._el.collection_filter_buttons) {
             return;
         }
-
         const selected = this._collection_filter.selected;
-        const isAll = selected.size === 0;
+        const isAll = selected.size === COLLECTION_CATEGORIES.length;
 
         this._el.collection_filter_buttons.all.setAttribute('aria-pressed', String(isAll));
         if (isAll) {
