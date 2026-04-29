@@ -89,6 +89,12 @@ function extractEventFromCSVObject(orig_row) {
     const text = row['Text'] || row['Object Description (Abstract)'] || '';
     const displayDate = row['Display Date'] || row['Year Published'] || '';
 
+    const keywordsRaw = getRowValueCaseInsensitive(row, 'Keywords/Subjects/Tags');
+    const keywords = String(keywordsRaw || '')
+        .split(';')
+        .map((s) => trim(s))
+        .filter((s) => s);
+
     var d = {
         media: {
             caption: row['Media Caption'] || '',
@@ -101,9 +107,11 @@ function extractEventFromCSVObject(orig_row) {
             headline: headline,
             text: text
         },
+        source_title: row['Title'] || headline,
         display_date: displayDate,
         group: row['Group'] || row['Tag'] || '', // small diff between v1 and v3 sheets
         assigned_collection: getRowValueCaseInsensitive(row, 'assigned collection'),
+        keywords: keywords,
         background: interpretBackground(row['Background']), // only in v3 but no problem
         type: row['Type'] || ''
     }

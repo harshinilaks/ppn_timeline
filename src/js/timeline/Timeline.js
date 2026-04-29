@@ -90,6 +90,66 @@ function matchesAssignedCollection(event, selectedCollections) {
     return selectedCollections.has(value);
 }
 
+function normalizeKeywordValue(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase();
+}
+
+function getEventKeywords(event) {
+    if (!event) {
+        return [];
+    }
+    if (Array.isArray(event.keywords)) {
+        return event.keywords;
+    }
+    if (typeof event.keywords === 'string') {
+        return event.keywords.split(';');
+    }
+    return [];
+}
+
+function matchesKeywordFilter(event, selectedKeywords, mode) {
+    if (!selectedKeywords || selectedKeywords.size === 0) {
+        return true;
+    }
+    const eventKeywords = getEventKeywords(event)
+        .map(normalizeKeywordValue)
+        .filter((s) => s);
+
+    if (eventKeywords.length === 0) {
+        return false;
+    }
+
+    if (mode === 'all') {
+        for (const kw of selectedKeywords) {
+            if (!eventKeywords.includes(kw)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // default: any
+    for (const kw of selectedKeywords) {
+        if (eventKeywords.includes(kw)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function normalizeTitleValue(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function getEventSourceTitle(event) {
+    if (!event) {
+        return '';
+    }
+    return event.source_title || (event.text && event.text.headline) || '';
+}
+
 function markPredefinedEvent(event) {
     if (event && typeof event === 'object') {
         event.is_predefined_event = true;
@@ -160,6 +220,7 @@ class Timeline {
         this._el = {
             container: DOM.get(elem),
             collection_filter: {},
+            title_pin: {},
             storyslider: {},
             timenav: {},
             menubar: {}
@@ -189,6 +250,17 @@ class Timeline {
 
         this._collection_filter = {
             selected: new Set(),
+        };
+
+        this._keyword_filter = {
+            selected: new Set(),
+            mode: 'any',
+            all_keywords: []
+        };
+
+        this._title_pin = {
+            selected_ids: new Set(),
+            all_titles: []
         };
 
         this._original_all_events = null;
@@ -402,12 +474,23 @@ class Timeline {
             this._original_all_eras = this.config.eras.slice();
         }
 
-        const selected = this._collection_filter.selected;
+        const selectedCollections = this._collection_filter.selected;
+        const selectedKeywords = this._keyword_filter.selected;
+        const keywordMode = this._keyword_filter.mode;
+        const pinnedIds = this._title_pin.selected_ids;
+
         this.config.events = this._original_all_events.filter((event) => {
             if (isPredefinedEvent(event)) {
                 return true;
             }
-            return matchesAssignedCollection(event, selected);
+
+            if (event && event.unique_id && pinnedIds && pinnedIds.has(event.unique_id)) {
+                return true;
+            }
+            if (!matchesAssignedCollection(event, selectedCollections)) {
+                return false;
+            }
+            return matchesKeywordFilter(event, selectedKeywords, keywordMode);
         });
         this.config.eras = this._original_all_eras.slice();
 
@@ -460,6 +543,286 @@ class Timeline {
         });
 
         this._syncCollectionFilterUI();
+    }
+
+    _rebuildKeywordUniverse() {
+        if (!this._original_all_events) {
+            this._keyword_filter.all_keywords = [];
+            return;
+        }
+        const keywordSet = new Set();
+        this._original_all_events.forEach((event) => {
+            if (isPredefinedEvent(event)) {
+                return;
+            }
+            getEventKeywords(event)
+                .map(normalizeKeywordValue)
+                .filter((s) => s)
+                .forEach((kw) => keywordSet.add(kw));
+        });
+        this._keyword_filter.all_keywords = Array.from(keywordSet).sort();
+    }
+
+    _initKeywordFilterUI() {
+        if (!this._el || !this._el.container) {
+            return;
+        }
+
+        if (!this._el.keyword_filter || this._el.keyword_filter.parentNode !== this._el.container) {
+            this._el.keyword_filter = DOM.create('div', 'tl-keyword-filter', this._el.container);
+        }
+        this._el.keyword_filter.innerHTML = '';
+
+        const inputWrap = DOM.create('div', 'tl-keyword-filter-inputwrap', this._el.keyword_filter);
+        const input = DOM.create('input', 'tl-keyword-filter-input', inputWrap);
+        input.type = 'text';
+        input.placeholder = 'Filter by keyword…';
+        input.setAttribute('aria-label', 'Filter by keyword');
+
+        const datalistId = 'tl-keyword-datalist-' + this._el.container.id;
+        input.setAttribute('list', datalistId);
+        const datalist = document.createElement('datalist');
+        datalist.id = datalistId;
+        this._el.keyword_filter.appendChild(datalist);
+
+        const modeWrap = DOM.create('div', 'tl-keyword-filter-mode', this._el.keyword_filter);
+        const modeAny = DOM.createButton('tl-keyword-filter-mode-button', modeWrap);
+        const modeAll = DOM.createButton('tl-keyword-filter-mode-button', modeWrap);
+        modeAny.innerHTML = 'Match any';
+        modeAll.innerHTML = 'Match all';
+
+        const chips = DOM.create('div', 'tl-keyword-filter-chips', this._el.keyword_filter);
+
+        const clearBtn = DOM.createButton('tl-keyword-filter-clear', this._el.keyword_filter);
+        clearBtn.innerHTML = 'Clear';
+
+        this._el.keyword_filter_controls = {
+            input,
+            datalist,
+            modeAny,
+            modeAll,
+            chips,
+            clearBtn
+        };
+
+        const commitKeyword = (raw) => {
+            const kw = normalizeKeywordValue(raw);
+            if (!kw) {
+                return;
+            }
+            if (!this._keyword_filter.all_keywords.includes(kw)) {
+                return;
+            }
+            const next = new Set(this._keyword_filter.selected);
+            next.add(kw);
+            this._keyword_filter.selected = next;
+            input.value = '';
+            this._syncKeywordFilterUI();
+            this._applyCollectionFilter();
+            this._rebuildTimeline();
+        };
+
+        input.addEventListener('change', () => commitKeyword(input.value));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commitKeyword(input.value);
+            }
+        });
+
+        modeAny.addEventListener('click', () => {
+            this._keyword_filter.mode = 'any';
+            this._syncKeywordFilterUI();
+            this._applyCollectionFilter();
+            this._rebuildTimeline();
+        });
+        modeAll.addEventListener('click', () => {
+            this._keyword_filter.mode = 'all';
+            this._syncKeywordFilterUI();
+            this._applyCollectionFilter();
+            this._rebuildTimeline();
+        });
+
+        clearBtn.addEventListener('click', () => {
+            this._keyword_filter.selected = new Set();
+            this._syncKeywordFilterUI();
+            this._applyCollectionFilter();
+            this._rebuildTimeline();
+        });
+
+        this._syncKeywordFilterUI();
+    }
+
+    _syncKeywordFilterUI() {
+        if (!this._el || !this._el.keyword_filter_controls) {
+            return;
+        }
+        const { datalist, chips, modeAny, modeAll } = this._el.keyword_filter_controls;
+
+        // datalist
+        datalist.innerHTML = '';
+        this._keyword_filter.all_keywords.forEach((kw) => {
+            const opt = document.createElement('option');
+            opt.value = kw;
+            datalist.appendChild(opt);
+        });
+
+        // mode buttons
+        if (this._keyword_filter.mode === 'all') {
+            modeAll.classList.add('tl-is-active');
+            modeAny.classList.remove('tl-is-active');
+        } else {
+            modeAny.classList.add('tl-is-active');
+            modeAll.classList.remove('tl-is-active');
+        }
+
+        // chips
+        chips.innerHTML = '';
+        Array.from(this._keyword_filter.selected).sort().forEach((kw) => {
+            const chip = DOM.create('button', 'tl-keyword-filter-chip', chips);
+            chip.type = 'button';
+            chip.innerHTML = kw;
+            chip.addEventListener('click', () => {
+                const next = new Set(this._keyword_filter.selected);
+                next.delete(kw);
+                this._keyword_filter.selected = next;
+                this._syncKeywordFilterUI();
+                this._applyCollectionFilter();
+                this._rebuildTimeline();
+            });
+        });
+    }
+
+    _rebuildTitleUniverse() {
+        if (!this._original_all_events) {
+            this._title_pin.all_titles = [];
+            return;
+        }
+        const titles = [];
+        this._original_all_events.forEach((event) => {
+            if (isPredefinedEvent(event)) {
+                return;
+            }
+            if (!event || !event.unique_id) {
+                return;
+            }
+            const title = String(getEventSourceTitle(event) || '').trim();
+            if (!title) {
+                return;
+            }
+            titles.push({
+                id: event.unique_id,
+                title
+            });
+        });
+        titles.sort((a, b) => a.title.localeCompare(b.title));
+        this._title_pin.all_titles = titles;
+    }
+
+    _initTitlePinUI() {
+        if (!this._el || !this._el.container) {
+            return;
+        }
+
+        if (!this._el.title_pin || this._el.title_pin.parentNode !== this._el.container) {
+            this._el.title_pin = DOM.create('div', 'tl-title-pin', this._el.container);
+        }
+        this._el.title_pin.innerHTML = '';
+
+        const inputWrap = DOM.create('div', 'tl-title-pin-inputwrap', this._el.title_pin);
+        const input = DOM.create('input', 'tl-title-pin-input', inputWrap);
+        input.type = 'text';
+        input.placeholder = 'Add by title…';
+        input.setAttribute('aria-label', 'Add by title');
+
+        const datalistId = 'tl-title-pin-datalist-' + this._el.container.id;
+        input.setAttribute('list', datalistId);
+        const datalist = document.createElement('datalist');
+        datalist.id = datalistId;
+        this._el.title_pin.appendChild(datalist);
+
+        const chips = DOM.create('div', 'tl-title-pin-chips', this._el.title_pin);
+
+        const clearBtn = DOM.createButton('tl-title-pin-clear', this._el.title_pin);
+        clearBtn.innerHTML = 'Clear';
+
+        this._el.title_pin_controls = {
+            input,
+            datalist,
+            chips,
+            clearBtn
+        };
+
+        const commitTitle = (raw) => {
+            const normalized = normalizeTitleValue(raw);
+            if (!normalized) {
+                return;
+            }
+
+            const match = this._title_pin.all_titles.find((t) => normalizeTitleValue(t.title) === normalized);
+            if (!match) {
+                return;
+            }
+
+            const next = new Set(this._title_pin.selected_ids);
+            next.add(match.id);
+            this._title_pin.selected_ids = next;
+            input.value = '';
+
+            this._syncTitlePinUI();
+            this._applyCollectionFilter();
+            this._rebuildTimeline();
+        };
+
+        input.addEventListener('change', () => commitTitle(input.value));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commitTitle(input.value);
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            this._title_pin.selected_ids = new Set();
+            this._syncTitlePinUI();
+            this._applyCollectionFilter();
+            this._rebuildTimeline();
+        });
+
+        this._syncTitlePinUI();
+    }
+
+    _syncTitlePinUI() {
+        if (!this._el || !this._el.title_pin_controls) {
+            return;
+        }
+        const { datalist, chips } = this._el.title_pin_controls;
+
+        datalist.innerHTML = '';
+        this._title_pin.all_titles.forEach((t) => {
+            const opt = document.createElement('option');
+            opt.value = t.title;
+            datalist.appendChild(opt);
+        });
+
+        chips.innerHTML = '';
+        const idToTitle = new Map(this._title_pin.all_titles.map((t) => [t.id, t.title]));
+        Array.from(this._title_pin.selected_ids)
+            .map((id) => ({ id, title: idToTitle.get(id) || id }))
+            .sort((a, b) => String(a.title).localeCompare(String(b.title)))
+            .forEach(({ id, title }) => {
+                const chip = DOM.create('button', 'tl-title-pin-chip', chips);
+                chip.type = 'button';
+                chip.innerHTML = title;
+                chip.addEventListener('click', () => {
+                    const next = new Set(this._title_pin.selected_ids);
+                    next.delete(id);
+                    this._title_pin.selected_ids = next;
+                    this._syncTitlePinUI();
+                    this._applyCollectionFilter();
+                    this._rebuildTimeline();
+                });
+            });
     }
 
     _syncCollectionFilterUI() {
@@ -620,6 +983,12 @@ class Timeline {
 
         this._initCollectionFilterUI();
 
+        this._rebuildKeywordUniverse();
+        this._initKeywordFilterUI();
+
+        this._rebuildTitleUniverse();
+        this._initTitlePinUI();
+
         // Create Layout
         if (this.options.timenav_position == "top") {
             this._el.timenav = DOM.create('div', 'tl-timenav', this._el.container);
@@ -638,8 +1007,12 @@ class Timeline {
         // Initial Default Layout
         this.options.width = this._el.container.offsetWidth;
         this.options.height = this._el.container.offsetHeight;
-        if (this._el.collection_filter && this._el.collection_filter.offsetHeight) {
-            this.options.height = Math.max(0, this.options.height - this._el.collection_filter.offsetHeight);
+        const filterHeights =
+            (this._el.collection_filter && this._el.collection_filter.offsetHeight ? this._el.collection_filter.offsetHeight : 0) +
+            (this._el.keyword_filter && this._el.keyword_filter.offsetHeight ? this._el.keyword_filter.offsetHeight : 0);
+        const titlePinHeight = (this._el.title_pin && this._el.title_pin.offsetHeight ? this._el.title_pin.offsetHeight : 0);
+        if (filterHeights || titlePinHeight) {
+            this.options.height = Math.max(0, this.options.height - filterHeights - titlePinHeight);
         }
         // this._el.storyslider.style.top  = "1px";
 
@@ -868,8 +1241,12 @@ class Timeline {
         // Update width and height
         this.options.width = this._el.container.offsetWidth;
         this.options.height = this._el.container.offsetHeight;
-        if (this._el.collection_filter && this._el.collection_filter.offsetHeight) {
-            this.options.height = Math.max(0, this.options.height - this._el.collection_filter.offsetHeight);
+        const filterHeights =
+            (this._el.collection_filter && this._el.collection_filter.offsetHeight ? this._el.collection_filter.offsetHeight : 0) +
+            (this._el.keyword_filter && this._el.keyword_filter.offsetHeight ? this._el.keyword_filter.offsetHeight : 0);
+        const titlePinHeight = (this._el.title_pin && this._el.title_pin.offsetHeight ? this._el.title_pin.offsetHeight : 0);
+        if (filterHeights || titlePinHeight) {
+            this.options.height = Math.max(0, this.options.height - filterHeights - titlePinHeight);
         }
 
         // Check if skinny
