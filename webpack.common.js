@@ -22,6 +22,10 @@ module.exports = {
                 {
                     from: './src/embed/*',
                     to: path.join(output_path, "embed/[name][ext]")
+                },
+                {
+                    from: './src/embed/root-index.html',
+                    to: path.join(output_path, "index.html")
                 }
             ]
         }),

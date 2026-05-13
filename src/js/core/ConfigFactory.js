@@ -404,7 +404,17 @@ export async function makeConfig(url, callback_or_options) {
     // Determine the source type and fetch the JSON configuration
     const key = parseGoogleSpreadsheetURL(url);
 
-    if (key) {
+    if (key && key.key && key.key.startsWith('v2:')) {
+        // 2PACX- style published CSV URLs: fetch directly, proxy returns 403 for these
+        try {
+            const csvUrl = makeGoogleCSVURL(url);
+            console.log(`reading 2PACX URL directly: ${csvUrl}`);
+            const json = await readCSVFromURL(csvUrl);
+            finalizeConfig(json, callback);
+        } catch (e) {
+            handleConfigError(e, callback);
+        }
+    } else if (key) {
         // Google Sheets: convert to CSV, then to JSON config format
         try {
             console.log(`reading url ${url}`);

@@ -22,24 +22,111 @@ const PREDEFINED_EVENTS = [
         start_date: { year: "1917", month: "11", day: "2" },
         text: {
             headline: "Balfour Declaration",
-            text: 'The British government promised support for a "national home for the Jewish people" in Palestine.'
+            text: "Issued by the British government during World War I, this 67-word letter expressed support for the establishment of a \"national home for the Jewish people\" in Palestine. For Palestinians, it represents a foundational moment of colonial dispossession, as their political rights were ignored in a land where they constituted the vast majority of the population."
         }
     },
     {
-        unique_id: "british-mandate-1922",
-        start_date: { year: "1922", month: "7", day: "24" },
+        unique_id: "british-mandate-1923",
+        start_date: { year: "1923", month: "9", day: "29" },
         text: {
             headline: "British Mandate",
-            text: "The League of Nations granted the UK control over Palestine, increasing Jewish immigration."
+            text: "Following the collapse of the Ottoman Empire, the League of Nations granted Britain administrative control over Palestine with the specific task of implementing the Balfour Declaration. This era was defined by rising tensions and Palestinian resistance as the British facilitated mass Zionist immigration and laid the groundwork for the future State of Israel."
         }
     },
     {
-        unique_id: "arab-revolt-1936-1939",
-        start_date: { year: "1936", month: "4", day: "1" },
-        end_date: { year: "1939", month: "1", day: "1" },
+        unique_id: "great-revolt-1936",
+        start_date: { year: "1936", month: "4", day: "19" },
         text: {
-            headline: "Arab Revolt",
-            text: "A major Palestinian uprising against British rule and Zionist migration, which was suppressed."
+            headline: "Great Revolt",
+            text: "Palestinians launched a massive nationalist uprising against British colonial rule and the policies facilitating mass Jewish immigration. It began with a six-month general strike and evolved into an armed insurgency that was eventually suppressed by the British military."
+        }
+    },
+    {
+        unique_id: "the-nakba-1948",
+        start_date: { year: "1948" },
+        text: {
+            headline: "The Nakba",
+            text: "Meaning \"The Catastrophe\" in Arabic, the Nakba refers to the mass displacement and dispossession of approximately 750,000 Palestinians during the 1948 war. It marks the destruction of Palestinian society and the beginning of a multi-generational refugee crisis that remains the heart of the Palestinian national struggle."
+        }
+    },
+    {
+        unique_id: "intilaqa-1965",
+        start_date: { year: "1965", month: "1", day: "1" },
+        text: {
+            headline: "Intilaqa",
+            text: "On January 1, the Fatah movement carried out its first armed operation against Israeli infrastructure, an attempt to sabotage the National Water Carrier. This marked the beginning of the modern Palestinian armed struggle and the rise of independent Palestinian political movements."
+        }
+    },
+    {
+        unique_id: "battle-of-karameh-1968",
+        start_date: { year: "1968", month: "3", day: "21" },
+        text: {
+            headline: "Battle of Karameh",
+            text: "The Battle of Karameh took place on March 21, 1968, when the Israel Defense Forces launched a massive raid into Jordan to destroy a base of the Palestine Liberation Organization (PLO) in the village of Karameh, violating a cease-fire agreement. Although the Israeli forces achieved their tactical objective of destroying the camp, they met unexpectedly fierce combined resistance from the Jordanian Army and PLO fighters, leading both sides to claim a strategic and psychological victory."
+        }
+    },
+    {
+        unique_id: "the-naksa-1967",
+        start_date: { year: "1967", month: "6", day: "5" },
+        text: {
+            headline: "The Naksa / The 6 Day War",
+            text: "Known as \"The Setback,\" this war resulted in Israel's military occupation of the West Bank, the Gaza Strip, and East Jerusalem. The event displaced hundreds of thousands more Palestinians and initiated a military occupation that continues to govern nearly every aspect of Palestinian life today."
+        }
+    },
+    {
+        unique_id: "first-intifada-1987",
+        start_date: { year: "1987", month: "12", day: "9" },
+        text: {
+            headline: "The First Intifada",
+            text: "This uprising was a predominantly non-violent, grassroots movement against the Israeli occupation characterized by mass civil disobedience and strikes. It successfully brought the Palestinian cause to the forefront of international politics and pressured both sides toward the negotiating table."
+        }
+    },
+    {
+        unique_id: "sabra-shatila-1982",
+        start_date: { year: "1982", month: "9", day: "16" },
+        text: {
+            headline: "Sabra and Shatila Massacres",
+            text: "During the Lebanese Civil War, Christian Lebanese militias entered these refugee camps in Beirut and killed between 800 and 3,500 Palestinian and Lebanese civilians. The massacre occurred while the Israeli military surrounded the area, sparking global outrage and highlighting the extreme vulnerability of Palestinians in exile."
+        }
+    },
+    {
+        unique_id: "madrid-conference-1991",
+        start_date: { year: "1991", month: "10", day: "30" },
+        text: {
+            headline: "Madrid Conference",
+            text: "Co-sponsored by the US and the USSR, this summit brought together leaders from Israel, Arab states, and a Palestinian delegation for the first face-to-face peace negotiations. While no immediate treaty was signed, it established the framework for future bilateral and multilateral talks."
+        }
+    },
+    {
+        unique_id: "oslo-accords-1993",
+        start_date: { year: "1993", month: "12", day: "13" },
+        text: {
+            headline: "Oslo Accords",
+            text: "These agreements between Israel and the Palestine Liberation Organization were intended to create a framework for a five-year transition toward Palestinian statehood and established the Palestinian Authority. However, the process eventually collapsed due to continued settlement expansion, missed deadlines, and recurring violence."
+        }
+    },
+    {
+        unique_id: "second-intifada-2000",
+        start_date: { year: "2000", month: "9", day: "28" },
+        text: {
+            headline: "The Second Intifada",
+            text: "A second, significantly more violent uprising erupted following the failure of peace negotiations and a controversial visit by Ariel Sharon to the Al-Aqsa compound. It was defined by intense armed clashes, suicide bombings, and large-scale Israeli military incursions into Palestinian cities."
+        }
+    },
+    {
+        unique_id: "siege-of-gaza-2007",
+        start_date: { year: "2007", month: "6" },
+        text: {
+            headline: "Siege of Gaza",
+            text: "After the Hamas movement took control of the Gaza Strip, Israel and Egypt imposed a comprehensive land, sea, and air blockade on the territory. This ongoing siege severely restricts the movement of people and the entry of goods, including medical supplies, fuel, and construction materials."
+        }
+    },
+    {
+        unique_id: "march-of-return-2018",
+        start_date: { year: "2018", month: "3", day: "30" },
+        text: {
+            headline: "March of Return",
+            text: "For over a year, Palestinians in Gaza held weekly protests near the fence with Israel to demand the right of refugees to return to their homes and an end to the blockade. The demonstrations involved thousands of civilians and were met with live ammunition from the Israeli military, resulting in high casualty rates."
         }
     }
 ];
@@ -221,6 +308,7 @@ class Timeline {
             container: DOM.get(elem),
             collection_filter: {},
             title_pin: {},
+            date_filter_bar: {},
             storyslider: {},
             timenav: {},
             menubar: {}
@@ -842,6 +930,59 @@ class Timeline {
             });
     }
 
+    _initDateFilterBarUI() {
+        if (!this._el || !this._el.container) {
+            return;
+        }
+
+        if (!this._el.date_filter_bar || this._el.date_filter_bar.parentNode !== this._el.container) {
+            this._el.date_filter_bar = DOM.create('div', 'tl-date-filter-bar', this._el.container);
+        }
+        this._el.date_filter_bar.innerHTML = '';
+
+        const label = DOM.create('div', 'tl-filter-label', this._el.date_filter_bar);
+        label.innerHTML = 'Filter by date';
+
+        const start = DOM.create('input', 'tl-date-filter-bar-input', this._el.date_filter_bar);
+        start.type = 'date';
+        start.setAttribute('aria-label', this._('filter_start_date') || 'Start date');
+        start.title = this._('filter_start_date') || 'Start date';
+
+        const end = DOM.create('input', 'tl-date-filter-bar-input', this._el.date_filter_bar);
+        end.type = 'date';
+        end.setAttribute('aria-label', this._('filter_end_date') || 'End date');
+        end.title = this._('filter_end_date') || 'End date';
+
+        const btnFilter = DOM.createButton('tl-date-filter-bar-button', this._el.date_filter_bar);
+        btnFilter.innerHTML = this._('filter') || 'Filter';
+        btnFilter.setAttribute('aria-label', this._('filter') || 'Filter');
+
+        const btnClear = DOM.createButton('tl-date-filter-bar-button', this._el.date_filter_bar);
+        btnClear.innerHTML = this._('clear') || 'Clear';
+        btnClear.setAttribute('aria-label', this._('clear') || 'Clear');
+
+        const apply = () => {
+            this.filterByDateRange(start.value, end.value);
+        };
+
+        btnFilter.addEventListener('click', apply);
+        btnClear.addEventListener('click', () => {
+            start.value = '';
+            end.value = '';
+            this.clearDateFilter();
+        });
+        start.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                apply();
+            }
+        });
+        end.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                apply();
+            }
+        });
+    }
+
     _syncCollectionFilterUI() {
         if (!this._el || !this._el.collection_filter_buttons) {
             return;
@@ -1005,6 +1146,8 @@ class Timeline {
         this._rebuildTitleUniverse();
         this._initTitlePinUI();
 
+        this._initDateFilterBarUI();
+
         // Create Layout
         if (this.options.timenav_position == "top") {
             this._el.timenav = DOM.create('div', 'tl-timenav', this._el.container);
@@ -1027,8 +1170,9 @@ class Timeline {
             (this._el.collection_filter && this._el.collection_filter.offsetHeight ? this._el.collection_filter.offsetHeight : 0) +
             (this._el.keyword_filter && this._el.keyword_filter.offsetHeight ? this._el.keyword_filter.offsetHeight : 0);
         const titlePinHeight = (this._el.title_pin && this._el.title_pin.offsetHeight ? this._el.title_pin.offsetHeight : 0);
-        if (filterHeights || titlePinHeight) {
-            this.options.height = Math.max(0, this.options.height - filterHeights - titlePinHeight);
+        const dateFilterHeight = (this._el.date_filter_bar && this._el.date_filter_bar.offsetHeight ? this._el.date_filter_bar.offsetHeight : 0);
+        if (filterHeights || titlePinHeight || dateFilterHeight) {
+            this.options.height = Math.max(0, this.options.height - filterHeights - titlePinHeight - dateFilterHeight);
         }
         // this._el.storyslider.style.top  = "1px";
 
@@ -1261,8 +1405,9 @@ class Timeline {
             (this._el.collection_filter && this._el.collection_filter.offsetHeight ? this._el.collection_filter.offsetHeight : 0) +
             (this._el.keyword_filter && this._el.keyword_filter.offsetHeight ? this._el.keyword_filter.offsetHeight : 0);
         const titlePinHeight = (this._el.title_pin && this._el.title_pin.offsetHeight ? this._el.title_pin.offsetHeight : 0);
-        if (filterHeights || titlePinHeight) {
-            this.options.height = Math.max(0, this.options.height - filterHeights - titlePinHeight);
+        const dateFilterHeight = (this._el.date_filter_bar && this._el.date_filter_bar.offsetHeight ? this._el.date_filter_bar.offsetHeight : 0);
+        if (filterHeights || titlePinHeight || dateFilterHeight) {
+            this.options.height = Math.max(0, this.options.height - filterHeights - titlePinHeight - dateFilterHeight);
         }
 
         // Check if skinny
